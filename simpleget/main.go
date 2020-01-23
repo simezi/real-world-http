@@ -1,28 +1,33 @@
 package main
 
 import (
-	"io/ioutil"
+	"bytes"
+	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
-	"net/url"
+	"os"
 )
 
 func main() {
-	values := url.Values{
-		"query": {
-			"hello, world",
-		},
-	}
-	resp, err := http.Get("http://localhost:18888" + "?" + values.Encode())
-	//resp, err := http.PostForm("http://localhost:18888" ,values)
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+	writer.WriteField("name", "Micheal Jackson")
+	fileWrite, err := writer.CreateFormFile("thumbnail" ,"photo.png")
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
+	readFile, err := os.Open("photo.png")
+	if(err != nil) {
 		panic(err)
 	}
-	log.Println(string(body))
-	log.Println("Headers:", resp.Header)
+	defer readFile.Close()
+	io.Copy(fileWrite, readFile)
+	writer.Close()
+
+	resp, err := http.Post("http://localhost:18888", writer.FormDataContentType(), &buffer)
+	if err !=nil {
+		panic(err)
+	}
+	log.Println("Status:",resp.Status)
 }
