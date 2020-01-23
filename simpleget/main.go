@@ -1,36 +1,18 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
-	"net/textproto"
-	"os"
+	"net/http/httputil"
+	"net/url"
 )
 
 func main() {
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-	part := make(textproto.MIMEHeader)
-	part.Set("Content-Type", "image/jpeg")
-	part.Set("Content-Disposition", `form-data; name=thumbnail; filename="photo.png"`)
-	fileWrite, err := writer.CreatePart(part)
-	if err != nil {
-		panic(err)
+	proxyUrl, _ := url.Parse("http://localhost:18888")
+	client := http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
 	}
-	readFile, err := os.Open("photo.png")
-	if(err != nil) {
-		panic(err)
-	}
-	defer readFile.Close()
-	io.Copy(fileWrite, readFile)
-	writer.Close()
-
-	resp, err := http.Post("http://localhost:18888", writer.FormDataContentType(), &buffer)
-	if err !=nil {
-		panic(err)
-	}
-	log.Println("Status:",resp.Status)
+	resp, _ := client.Get("http://github.com")
+	dump, _ := httputil.DumpResponse(resp, true)
+	log.Println(string(dump))
 }
